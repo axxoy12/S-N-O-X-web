@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>S-N-O-X Mini Browser</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: 'Segoe UI', sans-serif; background: #0d0d0d; color: #fff; }
+    body { display: flex; flex-direction: column; }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px;
+      background: #1a1a1a;
+      box-shadow: 0 0 20px #7d3cff;
+    }
+    .toolbar input[type="text"] {
+      flex: 1;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #7d3cff;
+      background: #1a1a1a;
+      color: #fff;
+    }
+    .toolbar input::placeholder { color: #bbb; }
+    .toolbar button {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #7d3cff;
+      background: #2a2a2a;
+      color: #fff;
+      cursor: pointer;
+      transition: 0.2s all;
+    }
+    .toolbar button:hover { background: #7d3cff; color: #fff; box-shadow: 0 0 10px #7d3cff; }
+    .toolbar button:disabled { opacity: 0.4; cursor: default; }
+
+    /* Iframe */
+    iframe {
+      flex: 1;
+      border: none;
+      background: #000;
+      width: 100%;
+    }
+
+    /* Status bar */
+    .status {
+      font-size: 13px;
+      padding: 6px 10px;
+      background: #1a1a1a;
+      color: #fff;
+      border-top: 1px solid #7d3cff;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Homepage */
+    .homepage {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 30px;
+      text-align: center;
+    }
+    .homepage h1 { 
+      font-size: 48px; 
+      letter-spacing: 10px; 
+      color: #7d3cff; 
+      text-shadow: 0 0 10px #7d3cff, 0 0 20px #7d3cff;
+      margin-bottom: 20px;
+    }
+    .homepage .shortcut-btn {
+      padding: 14px 24px;
+      border: none;
+      border-radius: 12px;
+      background: #2a2a2a;
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      transition: 0.3s all;
+      margin: 0 10px;
+      box-shadow: 0 0 5px #7d3cff;
+    }
+    .homepage .shortcut-btn:hover {
+      background: #7d3cff;
+      box-shadow: 0 0 20px #7d3cff;
+    }
+    .homepage input[type="text"] {
+      padding: 12px;
+      width: 320px;
+      border-radius: 12px;
+      border: 1px solid #7d3cff;
+      background: #1a1a1a;
+      color: #fff;
+    }
+    .homepage input::placeholder { color: #bbb; }
+    .homepage button.go-home {
+      padding: 12px 20px;
+      border-radius: 12px;
+      border: none;
+      background: #7d3cff;
+      color: #fff;
+      cursor: pointer;
+      margin-left: 8px;
+      transition: 0.3s all;
+      box-shadow: 0 0 5px #7d3cff;
+    }
+    .homepage button.go-home:hover { box-shadow: 0 0 20px #7d3cff; }
+
+    /* Download section */
+    .download-section {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .download-section input {
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #7d3cff;
+      background: #1a1a1a;
+      color: #fff;
+      width: 250px;
+    }
+    .download-section button {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: none;
+      background: #7d3cff;
+      color: #fff;
+      cursor: pointer;
+      transition: 0.2s all;
+    }
+    .download-section button:hover {
+      box-shadow: 0 0 10px #7d3cff;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Toolbar -->
+  <div class="toolbar" style="display:none;">
+    <button id="backBtn">◀</button>
+    <button id="forwardBtn">▶</button>
+    <button id="reloadBtn">⟳</button>
+    <input id="urlInput" type="text" placeholder="Enter URL (YouTube, Twitch, TikTok)" />
+    <button id="goBtn">Go</button>
+    <button id="homeBtn">🏠 Home</button>
+  </div>
+
+  <!-- Homepage -->
+  <div class="homepage">
+    <h1>S-N-O-X</h1>
+    <div>
+      <button class="shortcut-btn" data-url="https://www.youtube.com">YouTube</button>
+      <button class="shortcut-btn" data-url="https://www.twitch.tv">Twitch</button>
+      <button class="shortcut-btn" data-url="https://www.tiktok.com">TikTok</button>
+    </div>
+    <div>
+      <input id="homeUrlInput" type="text" placeholder="Enter any URL..." />
+      <button class="go-home" id="homeGoBtn">Go</button>
+    </div>
+    <div class="download-section">
+      <input id="videoUrl" type="text" placeholder="Paste direct video URL here" />
+      <button id="downloadBtn">Download Video</button>
+    </div>
+  </div>
+
+  <!-- Webview iframe -->
+  <iframe id="webview" style="display:none;"></iframe>
+
+  <!-- Status bar -->
+  <div class="status">
+    <span id="status">Ready</span>
+    <span id="footer">Made by Axxoy</span>
+  </div>
+
+  <script>
+    const homePage = document.querySelector('.homepage');
+    const toolbar = document.querySelector('.toolbar');
+    const webview = document.getElementById('webview');
+    const urlInput = document.getElementById('urlInput');
+    const status = document.getElementById('status');
+    const backBtn = document.getElementById('backBtn');
+    const forwardBtn = document.getElementById('forwardBtn');
+    const homeBtn = document.getElementById('homeBtn');
+
+    const historyStack = [];
+    let currentIndex = -1;
+
+    function formatURL(url) {
+      if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+
+      const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+      if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1`;
+
+      const twitchMatch = url.match(/twitch\.tv\/([a-zA-Z0-9_]+)/);
+      if (twitchMatch) return `https://player.twitch.tv/?channel=${twitchMatch[1]}&parent=${location.hostname}&autoplay=true`;
+
+      const tiktokMatch = url.match(/tiktok\.com\/@[\w.-]+\/video\/(\d+)/);
+      if (tiktokMatch) return `https://www.tiktok.com/embed/${tiktokMatch[1]}`;
+
+      return url;
+    }
+
+    function updateStatus() {
+      status.textContent = currentIndex >= 0 ? "Loaded: " + historyStack[currentIndex] : "Ready";
+    }
+
+    function updateNavButtons() {
+      backBtn.disabled = currentIndex <= 0;
+      forwardBtn.disabled = currentIndex >= historyStack.length - 1;
+    }
+
+    function loadURL(url) {
+      const formatted = formatURL(url);
+      webview.src = formatted;
+      status.textContent = "Loading...";
+      webview.onload = () => updateStatus();
+
+      if (currentIndex === -1 || historyStack[currentIndex] !== formatted) {
+        historyStack.splice(currentIndex + 1);
+        historyStack.push(formatted);
+        currentIndex = historyStack.length - 1;
+      }
+
+      updateNavButtons();
+      toolbar.style.display = 'flex';
+      webview.style.display = 'block';
+      homePage.style.display = 'none';
+      urlInput.value = url;
+    }
+
+    // Toolbar navigation
+    document.getElementById('goBtn').onclick = () => { if(urlInput.value.trim()) loadURL(urlInput.value.trim()); };
+    urlInput.addEventListener("keydown", e => { if(e.key==="Enter") loadURL(urlInput.value.trim()); });
+    backBtn.onclick = () => { if(currentIndex>0){ currentIndex--; webview.src=historyStack[currentIndex]; updateNavButtons(); updateStatus(); urlInput.value=historyStack[currentIndex]; }};
+    forwardBtn.onclick = () => { if(currentIndex<historyStack.length-1){ currentIndex++; webview.src=historyStack[currentIndex]; updateNavButtons(); updateStatus(); urlInput.value=historyStack[currentIndex]; }};
+    document.getElementById('reloadBtn').onclick = () => { if(currentIndex>=0) webview.src=historyStack[currentIndex]; };
+
+    // Homepage buttons
+    document.querySelectorAll('.shortcut-btn').forEach(btn => {
+      btn.addEventListener('click', () => loadURL(btn.dataset.url));
+    });
+    document.getElementById('homeGoBtn').onclick = () => {
+      const url = document.getElementById('homeUrlInput').value.trim();
+      if(url) loadURL(url);
+    };
+
+    // Home button
+    homeBtn.onclick = () => {
+      toolbar.style.display = 'none';
+      webview.style.display = 'none';
+      homePage.style.display = 'flex';
+      urlInput.value = '';
+    };
+
+    // Backspace for back navigation
+    document.addEventListener('keydown', (e) => {
+      const active = document.activeElement;
+      if (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') return;
+
+      if (e.key === 'Backspace') {
+        e.preventDefault();
+        if (currentIndex > 0) {
+          currentIndex--;
+          webview.src = historyStack[currentIndex];
+          updateNavButtons();
+          updateStatus();
+          urlInput.value = historyStack[currentIndex];
+        }
+      }
+    });
+
+    // Download button functionality
+    document.getElementById('downloadBtn').onclick = () => {
+      const url = document.getElementById('videoUrl').value.trim();
+      if(!url) return alert("Please enter a direct video URL!");
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'video.mp4';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    };
+  </script>
+</body>
+</html>
