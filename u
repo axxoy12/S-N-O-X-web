@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Password Gate – Circle Design</title>
+<style>
+  :root{
+    --bg:#0b0b0b;
+    --card:#1b1b1b;
+    --accent:#b26dff;
+    --accent2:#7d3cff;
+    --muted:#aaa;
+    --radius:25px;
+  }
+  body{
+    margin:0;padding:30px;
+    background:var(--bg);
+    color:#fff;
+    font-family:"Poppins",Arial,Helvetica,sans-serif;
+    display:flex;flex-direction:column;align-items:center;
+    min-height:100vh;
+  }
+  h1{
+    color:var(--accent);
+    font-size:1.7em;
+    margin-bottom:10px;
+    text-align:center;
+  }
+  .card{
+    background:var(--card);
+    padding:22px;
+    border-radius:var(--radius);
+    width:92%;max-width:520px;
+    margin-top:14px;
+    box-shadow:0 0 20px #0008;
+  }
+  input,select,button{
+    width:100%;
+    padding:12px;
+    margin-top:10px;
+    border-radius:var(--radius);
+    border:none;
+    font-size:15px;
+    transition:all .2s ease;
+  }
+  input,select{
+    background:#111;
+    color:#fff;
+  }
+  input:focus,select:focus{
+    outline:none;
+    box-shadow:0 0 0 2px var(--accent);
+  }
+  button{
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    color:#fff;
+    font-weight:700;
+    cursor:pointer;
+    border:none;
+  }
+  button:hover{
+    transform:scale(1.03);
+    box-shadow:0 0 10px var(--accent2);
+  }
+  .small{font-size:13px;color:var(--muted);margin-top:6px;text-align:center;}
+  .result{
+    background:#101010;
+    padding:12px;
+    border-radius:var(--radius);
+    margin-top:12px;
+    word-break:break-all;
+    text-align:center;
+  }
+  .hidden{display:none}
+  .admin{
+    margin-top:15px;
+    background:#111;
+    padding:14px;
+    border-radius:var(--radius);
+  }
+  .danger{
+    background:#d33;
+    color:#fff;
+  }
+  .row{
+    display:flex;gap:10px;
+  }
+  .row>*{flex:1}
+  a.link{
+    color:var(--accent);
+    text-decoration:none;
+    font-weight:bold;
+  }
+</style>
+</head>
+<body>
+
+<h1>🔒 Password Gate</h1>
+
+<div class="card" id="creator">
+  <label><strong>Target Link</strong></label>
+  <input id="targetLink" placeholder="https://example.com">
+
+  <label><strong>Time Limit</strong></label>
+  <select id="timeLimit">
+    <option value="5">5 minutes</option>
+    <option value="15">15 minutes</option>
+    <option value="60">60 minutes</option>
+    <option value="1440">24 hours</option>
+    <option value="never">Never (Persistent)</option>
+  </select>
+
+  <label><strong>Password Mode</strong></label>
+  <select id="mode">
+    <option value="one">One-Time Use</option>
+    <option value="rotating">Rotating</option>
+  </select>
+
+  <input id="initialPassword" placeholder="Optional: custom password">
+  <button onclick="generateGate()">Generate Gate</button>
+
+  <div class="small">Tip: choose <b>Never</b> for a permanent gate that stays until you delete it below.</div>
+  <div class="result hidden" id="resultBox"></div>
+</div>
+
+<div class="card hidden" id="gateBox">
+  <h3 style="text-align:center;">🔐 Protected Page</h3>
+  <div class="small" id="gateInfo"></div>
+  <input id="userPass" placeholder="Enter password">
+  <button onclick="checkPass()">Unlock</button>
+  <div class="result hidden" id="unlockResult"></div>
+  <button onclick="backToCreator()" style="margin-top:10px;background:#333;">Back</button>
+</div>
+
+<div class="card admin" id="adminCard">
+  <h3 style="margin:0;text-align:center;">Admin</h3>
+  <div class="small">Stored Gate (Local only):</div>
+  <div class="result" id="storedGate">No gate stored.</div>
+  <div class="row" style="margin-top:10px">
+    <button onclick="showPassword()">Show Password</button>
+    <button onclick="resetPassword()">Reset Password</button>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <button onclick="deleteGate()" class="danger">Delete Gate</button>
+    <button onclick="openGate()">Open Gate</button>
+  </div>
+</div>
+
+<script>
+const KEY='circle_gate_v1';
+function now(){return Date.now();}
+function genPass(n=6){return Math.random().toString(36).substr(2,n).toUpperCase();}
+let gate=loadGate();refreshAdmin();
+
+function loadGate(){
+  try{
+    const r=localStorage.getItem(KEY);if(!r)return null;
+    const g=JSON.parse(r);
+    if(g.exp!=='never'&&now()>g.exp){localStorage.removeItem(KEY);return null;}
+    return g;
+  }catch(e){return null;}
+}
+
+function saveGate(g){localStorage.setItem(KEY,JSON.stringify(g));gate=g;refreshAdmin();}
+
+function refreshAdmin(){
+  const el=document.getElementById('storedGate');
+  if(!gate){el.innerHTML='<em>No gate stored.</em>';return;}
+  const exp=gate.exp==='never'?'Never':new Date(gate.exp).toLocaleString();
+  el.innerHTML=`<b>Link:</b> ${gate.url}<br><b>Mode:</b> ${gate.mode}<br><b>Expires:</b> ${exp}`;
+}
+
+function generateGate(){
+  const t=document.getElementById('targetLink').value.trim();
+  if(!t)return alert('Enter a link.');
+  const time=document.getElementById('timeLimit').value;
+  const mode=document.getElementById('mode').value;
+  const pass=document.getElementById('initialPassword').value.trim()||genPass();
+  const exp=time==='never'?'never':now()+parseInt(time)*60000;
+  const g={url:t,pass,mode,exp};
+  saveGate(g);
+  const box=document.getElementById('resultBox');
+  box.innerHTML=`Gate Created<br><b>Password:</b> <code>${pass}</code><br>
+                 <b>Mode:</b> ${mode}<br><b>Expires:</b> ${exp==='never'?'Never':new Date(exp).toLocaleString()}<br><br>
+                 <button onclick="openGate()">Open Gate</button>`;
+  box.classList.remove('hidden');
+}
+
+function openGate(){
+  if(!gate)gate=loadGate();
+  if(!gate)return alert('No gate stored.');
+  document.getElementById('creator').classList.add('hidden');
+  document.getElementById('gateBox').classList.remove('hidden');
+  document.getElementById('adminCard').classList.add('hidden'); // 👈 hide admin
+  document.getElementById('gateInfo').innerHTML=`<b>Target:</b> ${gate.url}`;
+}
+
+function backToCreator(){
+  document.getElementById('gateBox').classList.add('hidden');
+  document.getElementById('creator').classList.remove('hidden');
+  document.getElementById('adminCard').classList.remove('hidden'); // 👈 show admin again
+}
+
+function checkPass(){
+  if(!gate)return;
+  const entered=document.getElementById('userPass').value.trim();
+  const out=document.getElementById('unlockResult');
+  if(gate.exp!=='never'&&now()>gate.exp){localStorage.removeItem(KEY);gate=null;refreshAdmin();out.innerText='⏰ Expired';out.classList.remove('hidden');return;}
+  if(entered===gate.pass){
+    out.innerHTML=`✅ Access Granted<br><a class="link" href="${gate.url}" target="_blank">${gate.url}</a>`;
+    out.classList.remove('hidden');
+    if(gate.mode==='one'){localStorage.removeItem(KEY);gate=null;refreshAdmin();}
+    else if(gate.mode==='rotating'){gate.pass=genPass();saveGate(gate);}
+  }else{
+    out.innerText='❌ Incorrect Password';
+    out.classList.remove('hidden');
+  }
+}
+
+function showPassword(){if(!gate)return alert('No gate');alert('Current password: '+gate.pass);}
+function resetPassword(){
+  if(!gate)return alert('No gate.');
+  const p=prompt('New password (blank = auto):')||genPass();
+  gate.pass=p;saveGate(gate);
+  alert('Password reset to: '+p);
+}
+function deleteGate(){if(!confirm('Delete gate?'))return;localStorage.removeItem(KEY);gate=null;refreshAdmin();alert('Deleted');}
+</script>
+
+</body>
+</html>
